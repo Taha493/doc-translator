@@ -14,8 +14,19 @@ from tenacity import retry_if_exception_type
 from tenacity import stop_after_attempt
 from tenacity import wait_exponential
 
+import arabic_reshaper
+from bidi.algorithm import get_display
+
 from babeldoc.translator.cache import TranslationCache
 from babeldoc.utils.atomic_integer import AtomicInteger
+
+# Import for HuggingFaceTranslator
+try:
+    import transformers
+    from transformers import MarianMTModel, MarianTokenizer, AutoModelForSeq2SeqLM, AutoTokenizer
+    HUGGINGFACE_AVAILABLE = True
+except ImportError:
+    HUGGINGFACE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +266,9 @@ class OpenAITranslator(BaseTranslator):
             messages=self.prompt(text),
         )
         self.update_token_count(response)
-        return response.choices[0].message.content.strip()
+        reshaped_text = arabic_reshaper.reshape(response.choices[0].message.content.strip())
+        bidi_text = get_display(reshaped_text)
+        return bidi_text
 
     def prompt(self, text):
         return [
@@ -306,7 +319,9 @@ class OpenAITranslator(BaseTranslator):
             extra_headers=extra_headers,
         )
         self.update_token_count(response)
-        return response.choices[0].message.content.strip()
+        reshaped_text = arabic_reshaper.reshape(response.choices[0].message.content.strip())
+        bidi_text = get_display(reshaped_text)
+        return bidi_text
 
     def update_token_count(self, response):
         try:
@@ -318,6 +333,111 @@ class OpenAITranslator(BaseTranslator):
                 self.completion_token_count.inc(response.usage.completion_tokens)
         except Exception as e:
             logger.exception("Error updating token count")
+
+    def get_formular_placeholder(self, placeholder_id: int):
+        return "{v" + str(placeholder_id) + "}", f"{{\\s*v\\s*{placeholder_id}\\s*}}"
+        return "{{" + str(placeholder_id) + "}}"
+
+    def get_rich_text_left_placeholder(self, placeholder_id: int):
+        return (
+            f"<style id='{placeholder_id}'>",
+            f"<\\s*style\\s*id\\s*=\\s*'\\s*{placeholder_id}\\s*'\\s*>",
+        )
+
+    def get_rich_text_right_placeholder(self, placeholder_id: int):
+        return "</style>", r"<\s*\/\s*style\s*>"
+
+
+class HuggingFaceTranslator(BaseTranslator):
+    # Hugging Face Translator implementation using MarianMT models
+    name = "huggingface"
+
+    def __init__(
+        self,
+        lang_in,
+        lang_out,
+        model_name,
+        ignore_cache=False,
+        device="cpu",
+        max_length=512,
+    ):
+        if not HUGGINGFACE_AVAILABLE:
+            raise ImportError(
+                "The transformers package is required for HuggingFaceTranslator. "
+                "Please install it with 'pip install transformers'"
+            )
+            
+        super().__init__(lang_in, lang_out, ignore_cache)
+        self.model = model_name
+        self.device = device
+        self.max_length = max_length
+        self.add_cache_impact_parameters("model", self.model)
+        
+        # Check if model is a MarianMT model
+        is_marian = "marian" in model_name.lower() or "marefa-mt" in model_name.lower() or "opus-mt" in model_name.lower()
+        
+        # Load model and tokenizer based on model type
+        if is_marian:
+            self.tokenizer = MarianTokenizer.from_pretrained(model_name)
+            self.model_obj = MarianMTModel.from_pretrained(model_name).to(device)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model_obj = AutoModelForSeq2SeqLM.from_pretrained(model_name).to(device)
+        
+        # Token counting
+        self.token_count = AtomicInteger()
+        self.prompt_token_count = AtomicInteger()
+        self.completion_token_count = AtomicInteger()
+
+    def do_translate(self, text, rate_limit_params: dict = None) -> str:
+        if not text or text.strip() == "":
+            print("text is empty")
+            return ""
+        
+        # Apply rate limiting if needed
+        _translate_rate_limiter.wait(rate_limit_params)
+        
+        try:
+            # Prepare input for MarianMT model
+            batch = self.tokenizer.prepare_seq2seq_batch([text], return_tensors="pt").to(self.device)
+            
+            # Generate translation
+            translated_tokens = self.model_obj.generate(**batch, max_length=self.max_length)
+            
+            print("translated_tokens:",translated_tokens)
+            # Decode the generated tokens
+            translation = self.tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+            
+            print("decodedtranslation:",translation)
+            # Update token counts
+            input_tokens = len(batch.input_ids[0])
+            output_tokens = len(translated_tokens[0])
+            self.token_count.inc(input_tokens + output_tokens)
+            self.prompt_token_count.inc(input_tokens)
+            self.completion_token_count.inc(output_tokens)
+            reshaped_text = arabic_reshaper.reshape(translation.strip())
+            bidi_text = get_display(reshaped_text)
+            return bidi_text
+        except Exception as e:
+            logger.error(f"Translation error: {e}")
+            # Fallback to a simpler approach if the batch preparation fails
+            inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=self.max_length).to(self.device)
+            outputs = self.model_obj.generate(**inputs, max_length=self.max_length)
+            translation = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            reshaped_text = arabic_reshaper.reshape(translation.strip())
+            bidi_text = get_display(reshaped_text)
+            return bidi_text
+
+    def prompt(self, text):
+        # For MarianMT models, we don't need a special prompt format
+        return text
+
+    def do_llm_translate(self, text, rate_limit_params: dict = None):
+        if text is None:
+            return None
+        
+        # For MarianMT models, we use the same translation method for both regular and LLM translation
+        return self.do_translate(text, rate_limit_params)
 
     def get_formular_placeholder(self, placeholder_id: int):
         return "{v" + str(placeholder_id) + "}", f"{{\\s*v\\s*{placeholder_id}\\s*}}"

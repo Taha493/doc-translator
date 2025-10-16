@@ -18,7 +18,7 @@ import babeldoc.format.pdf.high_level
 from babeldoc.format.pdf.translation_config import TranslationConfig
 from babeldoc.format.pdf.translation_config import WatermarkOutputMode
 from babeldoc.glossary import Glossary
-from babeldoc.translator.translator import OpenAITranslator
+from babeldoc.translator.translator import OpenAITranslator, HuggingFaceTranslator, HUGGINGFACE_AVAILABLE
 from babeldoc.translator.translator import set_translate_rate_limiter
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def create_parser():
     translation_group.add_argument(
         "--lang-out",
         "-lo",
-        default="zh",
+        default="en-ar",
         help="The code of target language.",
     )
     translation_group.add_argument(
@@ -366,41 +366,69 @@ def create_parser():
         action="store_true",
         help="Use OpenAI translator.",
     )
-    service_group = parser.add_argument_group(
+    service_group.add_argument(
+        "--huggingface",
+        action="store_true",
+        help="Use HuggingFace translator.",
+    )
+    # OpenAI specific options
+    openai_group = parser.add_argument_group(
         "Translation - OpenAI Options",
         description="OpenAI specific options",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--openai-model",
         default="gpt-4o-mini",
         help="The OpenAI model to use for translation.",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--openai-base-url",
         help="The base URL for the OpenAI API.",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--openai-api-key",
         "-k",
         help="The API key for the OpenAI API.",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--enable-json-mode-if-requested",
         action="store_true",
         default=False,
         help="Enable JSON mode for OpenAI requests.",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--send-dashscope-header",
         action="store_true",
         default=False,
         help="Send DashScope data inspection header to disable input/output inspection.",
     )
-    service_group.add_argument(
+    openai_group.add_argument(
         "--no-send-temperature",
         action="store_true",
         default=False,
         help="Do not send temperature parameter to OpenAI API (default: send temperature).",
+    )
+    
+    # HuggingFace specific options
+    huggingface_group = parser.add_argument_group(
+        "Translation - HuggingFace Options",
+        description="HuggingFace specific options",
+    )
+    huggingface_group.add_argument(
+        "--huggingface-model",
+        default="marefa-nlp/marefa-mt-en-ar",
+        help="The HuggingFace model to use for translation (e.g., marefa-nlp/marefa-mt-en-ar for English to Arabic).",
+    )
+    huggingface_group.add_argument(
+        "--huggingface-device",
+        default="cpu",
+        help="Device to run the model on (cpu, cuda, cuda:0, etc.).",
+    )
+    huggingface_group.add_argument(
+        "--huggingface-max-length",
+        type=int,
+        default=512,
+        help="Maximum sequence length for the model.",
     )
 
     return parser
@@ -432,13 +460,18 @@ async def main():
         logger.info("Warmup completed, exiting...")
         return
 
-    # 验证翻译服务选择
-    if not args.openai:
-        parser.error("必须选择一个翻译服务：--openai")
+    # Set HuggingFace as the default translator if no translator is specified
+    if not (args.openai or args.huggingface):
+        args.huggingface = True
+        logger.info("No translator specified, using HuggingFace as default")
 
     # 验证 OpenAI 参数
     if args.openai and not args.openai_api_key:
         parser.error("使用 OpenAI 服务时必须提供 API key")
+        
+    # 验证 HuggingFace 参数
+    if args.huggingface and not HUGGINGFACE_AVAILABLE:
+        parser.error("使用 HuggingFace 服务需要安装 transformers 库，请使用 'pip install transformers' 安装")
 
     # 实例化翻译器
     if args.openai:
@@ -452,6 +485,15 @@ async def main():
             enable_json_mode_if_requested=args.enable_json_mode_if_requested,
             send_dashscope_header=args.send_dashscope_header,
             send_temperature=not args.no_send_temperature,
+        )
+    elif args.huggingface:
+        translator = HuggingFaceTranslator(
+            lang_in=args.lang_in,
+            lang_out=args.lang_out,
+            model_name=args.huggingface_model,
+            ignore_cache=args.ignore_cache,
+            device=args.huggingface_device,
+            max_length=args.huggingface_max_length,
         )
     else:
         raise ValueError("Invalid translator type")

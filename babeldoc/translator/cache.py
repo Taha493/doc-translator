@@ -3,6 +3,8 @@ import logging
 import random
 import threading
 from pathlib import Path
+import time
+import os
 
 import peewee
 from peewee import SQL
@@ -183,17 +185,42 @@ def init_test_db():
 
 
 def clean_test_db(test_db):
-    test_db.drop_tables([_TranslationCache])
-    test_db.close()
+    try:
+        # Best effort to checkpoint and switch off WAL to release handles
+        try:
+            test_db.execute_sql("PRAGMA wal_checkpoint(TRUNCATE);")
+            test_db.execute_sql("PRAGMA journal_mode=DELETE;")
+        except Exception:
+            pass
+
+        test_db.drop_tables([_TranslationCache])
+    finally:
+        try:
+            test_db.close()
+        except Exception:
+            pass
+
     db_path = Path(test_db.database)
-    if db_path.exists():
-        db_path.unlink()
     wal_path = Path(str(db_path) + "-wal")
-    if wal_path.exists():
-        wal_path.unlink()
     shm_path = Path(str(db_path) + "-shm")
-    if shm_path.exists():
-        shm_path.unlink()
+
+    def _retry_unlink(p: Path, attempts: int = 10, delay: float = 0.1):
+        if not p.exists():
+            return
+        for i in range(attempts):
+            try:
+                os.unlink(p)
+                return
+            except PermissionError:
+                time.sleep(delay)
+            except Exception:
+                # Stop on other exceptions
+                return
+
+    # Try unlink auxiliary files first, then main DB file
+    _retry_unlink(wal_path)
+    _retry_unlink(shm_path)
+    _retry_unlink(db_path)
 
 
 init_db()

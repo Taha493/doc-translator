@@ -1,0 +1,3 @@
+# Additional requirements for HuggingFace translator support
+transformers>=4.30.0
+torch>=2.0.0

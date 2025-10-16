@@ -822,6 +822,10 @@ class ILTranslatorLLMOnly:
                     # Clean up any excessive punctuation in the translated text
                     translated_text = re.sub(r"[. 。…，]{20,}", ".", output)
 
+                    # Do NOT shape here; shaping is centralized in typesetting
+                    if self.translation_config.lang_out.startswith("en-ar") and translated_text.strip():
+                        pass
+
                     # Get the original input for this translation
                     translate_input = inputs[id_][1]
                     llm_translate_tracker = inputs[id_][4]

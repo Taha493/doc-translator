@@ -619,6 +619,28 @@ JP_FONT_FAMILY = {
     "base": ["SourceHanSansCN-Regular.ttf"],
 }
 
+# Arabic font family: prefer Arabic-aware fonts with full shaping support
+AR_FONT_FAMILY = {
+    "script": [
+        # Keep script list minimal; primary Arabic faces are in normal/base
+        "NotoNaskhArabic-Regular.ttf",
+    ],
+    "normal": [
+        "NotoNaskhArabic-Regular.ttf",
+        "NotoNaskhArabic-Bold.ttf",
+        "NotoSansArabic-Regular.ttf",
+        "NotoSansArabic-Bold.ttf",
+    ],
+    "fallback": [
+        # Fallbacks can still include pan-Unicode fonts if embedded
+        "GoNotoKurrent-Regular.ttf",
+        "GoNotoKurrent-Bold.ttf",
+    ],
+    "base": [
+        "NotoNaskhArabic-Regular.ttf",
+    ],
+}
+
 EN_FONT_FAMILY = {
     "script": [
         "NotoSans-Italic.ttf",
@@ -649,6 +671,7 @@ ALL_FONT_FAMILY = {
     "JP": JP_FONT_FAMILY,
     "EN": EN_FONT_FAMILY,
     "JA": JP_FONT_FAMILY,
+    "AR": AR_FONT_FAMILY,
 }
 
 
@@ -694,6 +717,8 @@ def get_font_family(lang_code: str):
         font_family = HK_FONT_FAMILY
     elif "TW" in lang_code:
         font_family = TW_FONT_FAMILY
+    elif "AR" in lang_code:
+        font_family = AR_FONT_FAMILY
     elif "EN" in lang_code:
         font_family = EN_FONT_FAMILY
     elif "CN" in lang_code:

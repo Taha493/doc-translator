@@ -1323,9 +1323,10 @@ class Typesetting:
                 # 如果没有众数（所有值都出现相同次数），则使用平均值
                 avg_height = sum(unit_heights) / len(unit_heights) * scale
 
-        # 初始化位置为右上角，并减去一个平均行高
-        current_x = box.x
-        current_y = box.y2 - avg_height
+        # 初始化位置：支持阿拉伯语 RTL 从右到左放置
+        rtl = self.lang_code.startswith("en-ar")
+        current_x = box.x2 if rtl else box.x
+        current_y = box.y2 - avg_heightss
         box = copy.deepcopy(box)
         # box.y -= avg_height * (line_spacing - 1.01) # line_spacing 已被替换为 line_skip
         line_height = 0
@@ -1337,16 +1338,20 @@ class Typesetting:
         last_unit: TypesettingUnit | None = None
         line_ys = [current_y]
         if paragraph.first_line_indent:
-            current_x += space_width * 4
+            if rtl:
+                current_x -= space_width * 4
+            else:
+                current_x += space_width * 4
         # 遍历所有排版单元
         for i, unit in enumerate(typesetting_units):
             # 计算当前单元在当前缩放下的尺寸
             unit_width = unit.width * scale
             unit_height = unit.height * scale
 
-            # 跳过行首的空格
-            if current_x == box.x and unit.is_space:
-                continue
+            # 跳过行首的空格（RTL/LTR）
+            if unit.is_space:
+                if (not rtl and current_x == box.x) or (rtl and current_x == box.x2):
+                    continue
 
             if (
                 last_unit  # 有上一个单元
@@ -1373,7 +1378,10 @@ class Typesetting:
                     "，",
                 ]
             ):
-                current_x += space_width * 0.5
+                if rtl:
+                    current_x -= space_width * 0.5
+                else:
+                    current_x += space_width * 0.5
             if use_english_line_break:
                 width_before_next_break_point = self._get_width_before_next_break_point(
                     typesetting_units[i:], scale
@@ -1381,20 +1389,38 @@ class Typesetting:
             else:
                 width_before_next_break_point = 0
 
-            # 如果当前行放不下这个元素，换行
-            if not unit.is_hung_punctuation and (
-                (current_x + unit_width > box.x2)
-                or (
-                    use_english_line_break
-                    and current_x + unit_width + width_before_next_break_point > box.x2
-                )
-                or (
-                    unit.is_cannot_appear_in_line_end_punctuation
-                    and current_x + unit_width * 2 > box.x2
-                )
-            ):
+            # 如果当前行放不下这个元素，换行（RTL/LTR）
+            overflow = False
+            if rtl:
+                if (
+                    (current_x - unit_width < box.x)
+                    or (
+                        use_english_line_break
+                        and current_x - unit_width - width_before_next_break_point < box.x
+                    )
+                    or (
+                        unit.is_cannot_appear_in_line_end_punctuation
+                        and current_x - unit_width * 2 < box.x
+                    )
+                ):
+                    overflow = True
+            else:
+                if (
+                    (current_x + unit_width > box.x2)
+                    or (
+                        use_english_line_break
+                        and current_x + unit_width + width_before_next_break_point > box.x2
+                    )
+                    or (
+                        unit.is_cannot_appear_in_line_end_punctuation
+                        and current_x + unit_width * 2 > box.x2
+                    )
+                ):
+                    overflow = True
+
+            if not unit.is_hung_punctuation and overflow:
                 # 换行
-                current_x = box.x
+                current_x = box.x2 if rtl else box.x
                 if not current_line_heights:
                     return [], False
                 max_height = max(current_line_heights)
@@ -1416,18 +1442,17 @@ class Typesetting:
                     continue
 
             # 放置当前单元
-            relocated_unit = unit.relocate(current_x, current_y, scale)
+            # 计算放置位置并更新 current_x
+            place_x = (current_x - unit_width) if rtl else current_x
+            relocated_unit = unit.relocate(place_x, current_y, scale)
             typeset_units.append(relocated_unit)
 
             # 添加当前单元的高度到当前行高度列表
             if not unit.is_space:
                 current_line_heights.append(unit_height)
 
-            prev_x = current_x
-            # 更新 x 坐标
-            current_x = relocated_unit.box.x2
-            if prev_x > current_x:
-                logger.warning(f"坐标回绕！！！TypesettingUnit: {unit.box}, ")
+            # 更新 x 坐标（RTL 向左推进，LTR 向右推进）
+            current_x = place_x if rtl else relocated_unit.box.x2
 
             last_unit = relocated_unit
 
@@ -1493,6 +1518,11 @@ class Typesetting:
                     continue
                 font = get_font(font_id, paragraph.xobj_id)
                 if composition.pdf_same_style_unicode_characters.unicode:
+                    # Arabic shaping + bidi for RTL languages (single centralized pass)
+                    unicode_text = composition.pdf_same_style_unicode_characters.unicode
+                    if self.lang_code.startswith("en-ar"):
+                        from babeldoc.format.pdf.document_il.utils.rtl import apply_arabic_shaping_to_text
+                        unicode_text = apply_arabic_shaping_to_text(unicode_text, self.lang_code, debug_print=False)
                     result.extend(
                         [
                             TypesettingUnit(
@@ -1508,7 +1538,7 @@ class Typesetting:
                                 debug_info=composition.pdf_same_style_unicode_characters.debug_info
                                 or False,
                             )
-                            for char_unicode in composition.pdf_same_style_unicode_characters.unicode
+                            for char_unicode in unicode_text
                             if char_unicode not in ("\n",)
                         ],
                     )

@@ -70,18 +70,39 @@ We recommend using the Tool feature of [uv](https://github.com/astral-sh/uv) to 
 2. Use the following command to install yadt:
 
 ```bash
+# Basic installation
 uv tool install --python 3.12 BabelDOC
 
+# With HuggingFace support
+uv tool install --python 3.12 "BabelDOC[huggingface]"
+
 babeldoc --help
+```
+
+Alternatively, you can use pip:
+
+```bash
+# Basic installation
+pip install BabelDOC
+
+# With HuggingFace support
+pip install "BabelDOC[huggingface]"
 ```
 
 3. Use the `babeldoc` command. For example:
 
 ```bash
-babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"  --files example.pdf
+# Using HuggingFace MarianMT model (default, no additional flags needed)
+babeldoc --files example.pdf
 
-# multiple files
-babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"  --files example1.pdf --files example2.pdf
+# Using HuggingFace MarianMT model with explicit options
+babeldoc --huggingface --huggingface-model "marefa-nlp/marefa-mt-en-ar" --files example.pdf
+
+# Using OpenAI
+babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here" --files example.pdf
+
+# Multiple files
+babeldoc --files example1.pdf --files example2.pdf
 ```
 
 ### Install from Source
@@ -106,10 +127,17 @@ uv run babeldoc --help
 3. Use the `uv run babeldoc` command. For example:
 
 ```bash
+# Using HuggingFace MarianMT model (default, no additional flags needed)
+uv run babeldoc --files example.pdf
+
+# Using HuggingFace MarianMT model with explicit options
+uv run babeldoc --huggingface --huggingface-model "marefa-nlp/marefa-mt-en-ar" --files example.pdf
+
+# Using OpenAI
 uv run babeldoc --files example.pdf --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"
 
-# multiple files
-uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"
+# Multiple files
+uv run babeldoc --files example.pdf --files example2.pdf
 ```
 
 > [!TIP]
@@ -130,10 +158,10 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 ### Language Options
 
 - `--lang-in`, `-li`: Source language code (default: en)
-- `--lang-out`, `-lo`: Target language code (default: zh)
+- `--lang-out`, `-lo`: Target language code (default: ar for Arabic)
 
 > [!TIP]
-> Currently, this project mainly focuses on English-to-Chinese translation, and other scenarios have not been tested yet.
+> This project now defaults to English-to-Arabic translation using the MarianMT model. Other language pairs can be used by specifying the appropriate language codes and models.
 > 
 > (2025.3.1 update): Basic English target language support has been added, primarily to minimize line breaks within words([0-9A-Za-z]+).
 > 
@@ -191,7 +219,8 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 - `--no-dual`: Do not output bilingual PDF files
 - `--no-mono`: Do not output monolingual PDF files
 - `--min-text-length`: Minimum text length to translate (default: 5)
-- `--openai`: Use OpenAI for translation (default: False)
+- `--openai`: Use OpenAI for translation (requires API key)
+- `--huggingface`: Use HuggingFace for translation (default)
 - `--custom-system-prompt`: Custom system prompt for translation.
 - `--add-formula-placehold-hint`: Add formula placeholder hint for translation. (Currently not recommended, it may affect translation quality, default: False)
 - `--pool-max-workers`: Maximum number of worker threads for internal task processing pools. If not specified, defaults to QPS value. This parameter directly sets the worker count, replacing previous QPS-based dynamic calculations.
@@ -199,11 +228,13 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 
 > [!TIP]
 >
-> 1. Currently, only OpenAI-compatible LLM is supported. For more translator support, please use [PDFMathTranslate 2.0](https://github.com/PDFMathTranslate/PDFMathTranslate-next).
-> 2. It is recommended to use models with strong compatibility with OpenAI, such as: `glm-4-flash`, `deepseek-chat`, etc.
-> 3. Currently, it has not been optimized for traditional translation engines like Bing/Google, it is recommended to use LLMs.
-> 4. You can use [litellm](https://github.com/BerriAI/litellm) to access multiple models.
-> 5. `--custom-system-prompt`: It is mainly used to add the `/no_think` instruction of Qwen 3 in the prompt. For example: `--custom-system-prompt "/no_think You are a professional, authentic machine translation engine."`
+> 1. BabelDOC now uses HuggingFace's MarianMT model (marefa-nlp/marefa-mt-en-ar) for English to Arabic translation by default.
+> 2. BabelDOC also supports OpenAI-compatible LLMs by using the `--openai` flag with an API key.
+> 3. For OpenAI-compatible LLMs, it is recommended to use models with strong compatibility with OpenAI, such as: `glm-4-flash`, `deepseek-chat`, etc.
+> 4. For HuggingFace models, translation-specific models like MarianMT models (marefa-nlp/marefa-mt-en-ar) and Helsinki-NLP's Opus-MT series work best.
+> 5. Currently, it has not been optimized for traditional translation engines like Bing/Google, it is recommended to use LLMs.
+> 6. You can use [litellm](https://github.com/BerriAI/litellm) to access multiple models.
+> 7. `--custom-system-prompt`: It is mainly used to add the `/no_think` instruction of Qwen 3 in the prompt. For example: `--custom-system-prompt "/no_think You are a professional, authentic machine translation engine."`
 
 ### OpenAI Specific Options
 
@@ -216,6 +247,20 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 >
 > 1. This tool supports any OpenAI-compatible API endpoints. Just set the correct base URL and API key. (e.g. `https://xxx.custom.xxx/v1`)
 > 2. For local models like Ollama, you can use any value as the API key (e.g. `--openai-api-key a`).
+
+### HuggingFace Specific Options
+
+- `--huggingface-model`: HuggingFace model to use for translation (default: marefa-nlp/marefa-mt-en-ar)
+- `--huggingface-device`: Device to run the model on (cpu, cuda, cuda:0, etc.) (default: cpu)
+- `--huggingface-max-length`: Maximum sequence length for the model (default: 512)
+
+> [!TIP]
+>
+> 1. You need to install the transformers package to use HuggingFace models: `pip install transformers torch`
+> 2. BabelDOC uses MarianMT models by default, specifically `marefa-nlp/marefa-mt-en-ar` for English to Arabic translation
+> 3. For other language pairs, Helsinki-NLP's Opus-MT models work well (e.g., `Helsinki-NLP/opus-mt-en-zh` for English to Chinese)
+> 4. For better performance on GPU, set `--huggingface-device cuda` if you have CUDA available
+> 5. The first time you use a model, it will be downloaded automatically
 
 ### Glossary Options
 
@@ -326,6 +371,38 @@ The current recommended way to call BabelDOC in Python is to call the `high_leve
 
 > [!WARNING]
 > **All APIs of BabelDOC should be considered as internal APIs, and any direct use of BabelDOC is not supported.**
+
+## Example Commands
+
+### Using OpenAI API
+
+```bash
+babeldoc --files paper.pdf --openai --openai-api-key YOUR_API_KEY --lang-in en --lang-out zh-CN
+```
+
+### Using OpenAI-compatible API
+
+```bash
+babeldoc --files paper.pdf --openai --openai-api-key YOUR_API_KEY --openai-base-url https://api.example.com/v1 --lang-in en --lang-out zh-CN
+```
+
+### Using HuggingFace Translation Model
+
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model Helsinki-NLP/opus-mt-en-zh --lang-in en --lang-out zh-CN
+```
+
+### Using MarianMT Model for English to Arabic Translation
+
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model marefa-nlp/marefa-mt-en-ar --lang-in en --lang-out ar
+```
+
+### Using HuggingFace with GPU Acceleration
+
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model Helsinki-NLP/opus-mt-en-zh --huggingface-device cuda --lang-in en --lang-out zh-CN
+```
 
 ## Background
 

@@ -667,6 +667,7 @@ class ILTranslator:
         if not input_text.placeholders:
             comp = PdfParagraphComposition()
             comp.pdf_same_style_unicode_characters = PdfSameStyleUnicodeCharacters()
+            # Keep raw output here; shaping is applied later in typesetting
             comp.pdf_same_style_unicode_characters.unicode = output
             comp.pdf_same_style_unicode_characters.pdf_style = input_text.base_style
             if llm_translate_tracker:
@@ -721,9 +722,7 @@ class ILTranslator:
                     comp.pdf_same_style_unicode_characters = (
                         PdfSameStyleUnicodeCharacters()
                     )
-                    comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(
-                        text,
-                    )
+                    comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(text)
                     comp.pdf_same_style_unicode_characters.pdf_style = (
                         input_text.base_style
                     )
@@ -763,15 +762,25 @@ class ILTranslator:
                     re.IGNORECASE,
                 ).group(1)
 
-                if isinstance(
-                    placeholder.composition,
-                    PdfSameStyleCharacters,
-                ) and text.replace(" ", "") == "".join(
-                    x.char_unicode for x in placeholder.composition.pdf_character
-                ).replace(
-                    " ",
-                    "",
-                ):
+                # For Arabic output, never reuse PdfSameStyleCharacters; always create
+                # a unicode composition so shaping/bidi can be applied later.
+                use_original_chars = (
+                    isinstance(placeholder.composition, PdfSameStyleCharacters)
+                    and text.replace(" ", "")
+                    == "".join(x.char_unicode for x in placeholder.composition.pdf_character).replace(
+                        " ", ""
+                    )
+                    and not (
+                        self.translation_config.lang_out
+                        and (
+                            self.translation_config.lang_out.lower() == "en-ar"
+                            or self.translation_config.lang_out.lower().startswith("ar-")
+                            or self.translation_config.lang_out.lower().endswith("-ar")
+                        )
+                    )
+                )
+
+                if use_original_chars:
                     comp = PdfParagraphComposition(
                         pdf_same_style_characters=placeholder.composition,
                     )
@@ -783,9 +792,7 @@ class ILTranslator:
                     comp.pdf_same_style_unicode_characters.pdf_style = (
                         placeholder.composition.pdf_style
                     )
-                    comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(
-                        text,
-                    )
+                    comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(text)
                 result.append(comp)
 
             last_end = match.end()
@@ -796,9 +803,7 @@ class ILTranslator:
             if text:
                 comp = PdfParagraphComposition()
                 comp.pdf_same_style_unicode_characters = PdfSameStyleUnicodeCharacters()
-                comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(
-                    text,
-                )
+                comp.pdf_same_style_unicode_characters.unicode = remove_placeholder(text)
                 comp.pdf_same_style_unicode_characters.pdf_style = input_text.base_style
                 result.append(comp)
 
@@ -851,7 +856,10 @@ class ILTranslator:
             if llm_translate_tracker := tracker.last_llm_translate_tracker():
                 llm_translate_tracker.set_placeholder_full_match()
             return False
+        
+        # Keep raw unicode here; shaping happens during typesetting
         paragraph.unicode = translated_text
+        
         paragraph.pdf_paragraph_composition = self.parse_translate_output(
             translate_input,
             translated_text,
@@ -1034,6 +1042,12 @@ Now, please carefully read the following text to be translated and directly outp
                         },
                     )
                 translated_text = re.sub(r"[. 。…，]{20,}", ".", translated_text)
+
+                # Do NOT shape here; shaping is centralized in typesetting
+                if self.translation_config.lang_out.startswith("en-ar") and translated_text.strip():
+                    print(f"\n=== ARABIC TRANSLATION DEBUG ===")
+                    print(f"Original API Response: {repr(translated_text)}")
+                    print(f"=== END DEBUG ===\n")
 
                 # Post-translation processing
                 self.post_translate_paragraph(

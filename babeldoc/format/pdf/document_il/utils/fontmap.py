@@ -3,6 +3,7 @@ import functools
 import logging
 import re
 from pathlib import Path
+import os
 
 import pymupdf
 
@@ -80,6 +81,35 @@ class FontMapper:
                 "encoding_length"
             ]
 
+        # Optional: allow injecting additional fonts via env for languages not bundled yet
+        # e.g., set BABELDOC_EXTRA_FONTS to a semicolon-separated list of font file paths
+        extra_fonts_env = os.environ.get("BABELDOC_EXTRA_FONTS")
+        if extra_fonts_env:
+            for font_path_str in extra_fonts_env.split(";"):
+                font_path_str = font_path_str.strip()
+                if not font_path_str:
+                    continue
+                p = Path(font_path_str)
+                if not p.exists():
+                    logger.warning("Extra font not found: %s", p)
+                    continue
+                try:
+                    pym_font = pymupdf.Font(fontfile=str(p))
+                    font_id = p.name
+                    if font_id in self.fonts:
+                        continue
+                    self.fonts[font_id] = pym_font
+                    self.fontid2fontpath[font_id] = p
+                    self.fonts[font_id].font_id = font_id
+                    self.fonts[font_id].font_path = p
+                    # Fallback metadata for non-embedded fonts
+                    self.fonts[font_id].ascent_fontmap = getattr(pym_font, "ascent", 1069)
+                    self.fonts[font_id].descent_fontmap = getattr(pym_font, "descent", -293)
+                    # Use 2 bytes per glyph id as a safe default
+                    self.fonts[font_id].encoding_length = 2
+                except Exception as e:
+                    logger.warning("Failed to load extra font %s: %s", p, e)
+
         self.normal_font_ids: list[str] = font_family["normal"]
         self.script_font_ids: list[str] = font_family["script"]
         self.fallback_font_ids: list[str] = font_family["fallback"]
@@ -99,8 +129,12 @@ class FontMapper:
             self.fontid2font[font_id] for font_id in self.script_font_ids
         ]
         self.fallback_fonts: list[pymupdf.Font] = [
-            self.fontid2font[font_id] for font_id in self.fallback_font_ids
+            self.fontid2font[font_id] for font_id in self.fallback_font_ids if font_id in self.fontid2font
         ]
+        # Append any extra injected fonts to fallback set
+        for k, v in self.fontid2font.items():
+            if k not in set(self.normal_font_ids + self.script_font_ids + self.fallback_font_ids + self.base_font_ids):
+                self.fallback_fonts.append(v)
 
         self.base_font = self.fontid2font["base"]
 
