@@ -7,7 +7,16 @@ aiofiles==23.2.1
 # CORS support
 python-jose[cryptography]==3.3.0
 
-# Your existing BabelDOC dependencies (add any missing ones)
+# Missing dependencies - ADD THESE
+tenacity
+tqdm
+rich
+peewee
+requests
+scikit-learn
+opencv-python-headless
+
+# Your existing BabelDOC dependencies
 magic-pdf
 PyMuPDF
 anthropic
