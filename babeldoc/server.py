@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # Import BabelDOC modules
@@ -58,8 +58,7 @@ TEMP_DIR.mkdir(exist_ok=True)
 # Language code mapping
 LANGUAGE_CODES = {
     'en': 'en',
-    'ar': 'ar',
-    'en-ar': 'en-ar',
+    'ar': 'en-ar',
     'es': 'es',
     'fr': 'fr',
     'de': 'de',
@@ -83,14 +82,14 @@ async def startup_event():
         logger.error(f"Failed to initialize BabelDOC: {e}")
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def root():
     """Serve the frontend HTML"""
     try:
         with open("frontend/index.html", "r", encoding="utf-8") as f:
-            return f.read()
+            return HTMLResponse(content=f.read())
     except FileNotFoundError:
-        return {
+        return JSONResponse({
             "name": "BabelDOC API",
             "version": "1.0.0",
             "status": "running",
@@ -99,7 +98,7 @@ async def root():
                 "languages": "/languages",
                 "translate": "/translate"
             }
-        }
+        })
 
 
 @app.get("/health")
@@ -118,7 +117,7 @@ async def get_supported_languages():
     return {
         "supported_languages": {
             "en": "English",
-            "en-ar": "Arabic",
+            "ar": "Arabic",
             "es": "Spanish",
             "fr": "French",
             "de": "German",
@@ -221,18 +220,15 @@ async def translate_document(
             lang_in=LANGUAGE_CODES[source_lang],
             lang_out=LANGUAGE_CODES[target_lang],
             output_dir=str(output_directory),
-            doc_layout_model="layoutv1",
+            doc_layout_model= None,
             pages=None,  # Translate all pages
-            skip_clean=True,  # Keep temp files for debugging
+            skip_clean=False,  # Clean temp files
         )
-        
-        # Create progress monitor
-        # progress_monitor = ProgressMonitor()
         
         # Perform translation asynchronously
         logger.info("Starting translation process...")
         
-        result = None
+        translate_result = None
         async for event in async_translate(config):
             if event["type"] == "progress_update":
                 logger.debug(
@@ -241,7 +237,7 @@ async def translate_document(
                     f"(Overall: {event['overall_progress']}%)"
                 )
             elif event["type"] == "finish":
-                result = event["translate_result"]
+                translate_result = event["translate_result"]
                 logger.info("Translation completed successfully")
                 break
             elif event["type"] == "error":
@@ -252,32 +248,49 @@ async def translate_document(
                     detail=f"Translation failed: {error_msg}"
                 )
         
-        if result is None:
+        if translate_result is None:
             raise HTTPException(
                 status_code=500,
                 detail="Translation completed but no result returned"
             )
         
-        # Get the output PDF path
-        # BabelDOC creates output with specific naming convention
+        # Find the output PDF
         output_pdf = None
         
-        # Try to find the translated PDF
-        if result.mono_pdf_path and result.mono_pdf_path.exists():
-            output_pdf = result.mono_pdf_path
-        elif result.no_watermark_mono_pdf_path and result.no_watermark_mono_pdf_path.exists():
-            output_pdf = result.no_watermark_mono_pdf_path
+        # Check if translate_result has the expected attributes
+        try:
+            if hasattr(translate_result, 'mono_pdf_path') and translate_result.mono_pdf_path:
+                output_pdf = translate_result.mono_pdf_path
+        except:
+            pass
         
         if not output_pdf:
-            # Fallback: search for any PDF in output directory
+            try:
+                if hasattr(translate_result, 'no_watermark_mono_pdf_path') and translate_result.no_watermark_mono_pdf_path:
+                    output_pdf = translate_result.no_watermark_mono_pdf_path
+            except:
+                pass
+        
+        # Fallback: search output directory
+        if not output_pdf or not Path(output_pdf).exists():
             pdf_files = list(output_directory.glob("*.pdf"))
             if pdf_files:
                 output_pdf = pdf_files[0]
         
-        if not output_pdf or not output_pdf.exists():
+        if not output_pdf:
             raise HTTPException(
                 status_code=500,
                 detail="Translation completed but output file not found"
+            )
+        
+        # Convert to Path if it's a string
+        if isinstance(output_pdf, str):
+            output_pdf = Path(output_pdf)
+        
+        if not output_pdf.exists():
+            raise HTTPException(
+                status_code=500,
+                detail=f"Translation completed but output file does not exist: {output_pdf}"
             )
         
         logger.info(f"Translation successful: {output_pdf}")
@@ -304,13 +317,15 @@ async def translate_document(
         )
     
     finally:
-        # Cleanup temporary files (optional - comment out for debugging)
-        try:
-            if session_dir.exists():
-                shutil.rmtree(session_dir)
-                logger.info(f"Cleaned up session: {session_id}")
-        except Exception as e:
-            logger.warning(f"Failed to cleanup session {session_id}: {e}")
+        # Cleanup temporary files after a delay to allow file download
+        # Comment out for debugging
+        pass
+        # try:
+        #     if session_dir.exists():
+        #         shutil.rmtree(session_dir)
+        #         logger.info(f"Cleaned up session: {session_id}")
+        # except Exception as e:
+        #     logger.warning(f"Failed to cleanup session {session_id}: {e}")
 
 
 if __name__ == "__main__":
