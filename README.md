@@ -1,65 +1,5 @@
 <!-- # Yet Another Document Translator -->
 
-<div align="center">
-<!-- <img src="https://s.immersivetranslate.com/assets/r2-uploads/images/babeldoc-banner.png" width="320px"  alt="YADT"/> -->
-
-<br/>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://s.immersivetranslate.com/assets/uploads/babeldoc-big-logo-darkmode-with-transparent-background-IKuNO1.svg" width="320px" alt="BabelDOC"/>
-  <img src="https://s.immersivetranslate.com/assets/uploads/babeldoc-big-logo-with-transparent-background-2xweBr.svg" width="320px" alt="BabelDOC"/>
-</picture>
-
-<!-- <h2 id="title">BabelDOC</h2> -->
-
-<p>
-  <!-- PyPI -->
-  <a href="https://pypi.org/project/BabelDOC/">
-    <img src="https://img.shields.io/pypi/v/BabelDOC"></a>
-  <a href="https://pepy.tech/projects/BabelDOC">
-    <img src="https://static.pepy.tech/badge/BabelDOC"></a>
-  <!-- <a href="https://github.com/funstory-ai/BabelDOC/pulls">
-    <img src="https://img.shields.io/badge/contributions-welcome-green"></a> -->
-  <!-- License -->
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/github/license/funstory-ai/BabelDOC"></a>
-  <a href="https://t.me/+Z9_SgnxmsmA5NzBl">
-    <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=flat-squeare&logo=telegram&logoColor=white"></a>
-  <a href="https://deepwiki.com/funstory-ai/BabelDOC"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-</p>
-
-<a href="https://trendshift.io/repositories/13358" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13358" alt="funstory-ai%2FBabelDOC | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-</div>
-
-PDF scientific paper translation and bilingual comparison library.
-
-- **Online Service**: Beta version launched [Immersive Translate - BabelDOC](https://app.immersivetranslate.com/babel-doc/) 1000 free pages per month.
-- **Self-deployment**: [PDFMathTranslate 2.0](https://github.com/PDFMathTranslate/PDFMathTranslate-next) support for BabelDOC, available for self-deployment + WebUI with more translation services.
-- Provides a simple [command line interface](#getting-started).
-- Provides a [Python API](#python-api).
-- Mainly designed to be embedded into other programs, but can also be used directly for simple translation tasks.
-
-> [!TIP]
->
-> How to use BabelDOC in Zotero
->
-> 1. Immersive Translate Pro members can use the [immersive-translate/zotero-immersivetranslate](https://github.com/immersive-translate/zotero-immersivetranslate) plugin
->
-> 2. PDFMathTranslate self-deployed users can use the [guaguastandup/zotero-pdf2zh](https://github.com/guaguastandup/zotero-pdf2zh) plugin
-
-[Supported Language](https://funstory-ai.github.io/BabelDOC/supported_languages/)
-
-## Preview
-
-<div align="center">
-<img src="https://s.immersivetranslate.com/assets/r2-uploads/images/babeldoc-preview.png" width="80%"/>
-</div>
-
-## We are hiring
-
-See details: [EN](https://github.com/funstory-ai/jobs) | [ZH](https://github.com/funstory-ai/jobs/blob/main/README_ZH.md)
-
 ## Getting Started
 
 ### Install from PyPI
@@ -71,18 +11,39 @@ We recommend using the Tool feature of [uv](https://github.com/astral-sh/uv) to 
 2. Use the following command to install yadt:
 
 ```bash
+# Basic installation
 uv tool install --python 3.12 BabelDOC
 
+# With HuggingFace support
+uv tool install --python 3.12 "BabelDOC[huggingface]"
+
 babeldoc --help
+```
+
+Alternatively, you can use pip:
+
+```bash
+# Basic installation
+pip install BabelDOC
+
+# With HuggingFace support
+pip install "BabelDOC[huggingface]"
 ```
 
 3. Use the `babeldoc` command. For example:
 
 ```bash
-babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"  --files example.pdf
+# Using HuggingFace MarianMT model (default, no additional flags needed)
+babeldoc --files example.pdf
 
-# multiple files
-babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"  --files example1.pdf --files example2.pdf
+# Using HuggingFace MarianMT model with explicit options
+babeldoc --huggingface --huggingface-model "marefa-nlp/marefa-mt-en-ar" --files example.pdf
+
+# Using OpenAI
+babeldoc --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here" --files example.pdf
+
+# Multiple files
+babeldoc --files example1.pdf --files example2.pdf
 ```
 
 ### Install from Source
@@ -107,38 +68,31 @@ uv run babeldoc --help
 3. Use the `uv run babeldoc` command. For example:
 
 ```bash
+# Using HuggingFace MarianMT model (default, no additional flags needed)
+uv run babeldoc --files example.pdf
+
+# Using HuggingFace MarianMT model with explicit options
+uv run babeldoc --huggingface --huggingface-model "marefa-nlp/marefa-mt-en-ar" --files example.pdf
+
+# Using OpenAI
 uv run babeldoc --files example.pdf --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"
 
-# multiple files
-uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model "gpt-4o-mini" --openai-base-url "https://api.openai.com/v1" --openai-api-key "your-api-key-here"
+# Multiple files
+uv run babeldoc --files example.pdf --files example2.pdf
 ```
 
 > [!TIP]
 > The absolute path is recommended.
 
-## Advanced Options
-
-> [!NOTE]
-> This CLI is mainly for debugging purposes. Although end users can use this CLI to translate files, we do not provide any technical support for this purpose.
->
-> End users should directly use **Online Service**: Beta version launched [Immersive Translate - BabelDOC](https://app.immersivetranslate.com/babel-doc/) 1000 free pages per month.
->
-> End users who need self-deployment should use [PDFMathTranslate 2.0](https://github.com/PDFMathTranslate/PDFMathTranslate-next)
-> 
-> If you find that an option is not listed below, it means that this option is a debugging option for maintainers. Please do not use these options.
-
-
 ### Language Options
 
 - `--lang-in`, `-li`: Source language code (default: en)
-- `--lang-out`, `-lo`: Target language code (default: zh)
+- `--lang-out`, `-lo`: Target language code (default: ar for Arabic)
 
 > [!TIP]
-> Currently, this project mainly focuses on English-to-Chinese translation, and other scenarios have not been tested yet.
-> 
+> This project now defaults to English-to-Arabic translation using the MarianMT model. Other language pairs can be used by specifying the appropriate language codes and models.
+>
 > (2025.3.1 update): Basic English target language support has been added, primarily to minimize line breaks within words([0-9A-Za-z]+).
-> 
-> [HELP WANTED: Collecting word regular expressions for more languages](https://github.com/funstory-ai/BabelDOC/issues/129)
 
 ### PDF Processing Options
 
@@ -177,6 +131,7 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 - `--save-auto-extracted-glossary`: Save automatically extracted glossary to the specified file. If not set, the glossary will not be saved.
 
 > [!TIP]
+>
 > - Both `--skip-clean` and `--dual-translate-first` may help improve compatibility with some PDF readers
 > - `--disable-rich-text-translate` can also help with compatibility by simplifying translation input
 > - However, using `--skip-clean` will result in larger file sizes
@@ -192,7 +147,8 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 - `--no-dual`: Do not output bilingual PDF files
 - `--no-mono`: Do not output monolingual PDF files
 - `--min-text-length`: Minimum text length to translate (default: 5)
-- `--openai`: Use OpenAI for translation (default: False)
+- `--openai`: Use OpenAI for translation (requires API key)
+- `--huggingface`: Use HuggingFace for translation (default)
 - `--custom-system-prompt`: Custom system prompt for translation.
 - `--add-formula-placehold-hint`: Add formula placeholder hint for translation. (Currently not recommended, it may affect translation quality, default: False)
 - `--pool-max-workers`: Maximum number of worker threads for internal task processing pools. If not specified, defaults to QPS value. This parameter directly sets the worker count, replacing previous QPS-based dynamic calculations.
@@ -200,11 +156,13 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 
 > [!TIP]
 >
-> 1. Currently, only OpenAI-compatible LLM is supported. For more translator support, please use [PDFMathTranslate 2.0](https://github.com/PDFMathTranslate/PDFMathTranslate-next).
-> 2. It is recommended to use models with strong compatibility with OpenAI, such as: `glm-4-flash`, `deepseek-chat`, etc.
-> 3. Currently, it has not been optimized for traditional translation engines like Bing/Google, it is recommended to use LLMs.
-> 4. You can use [litellm](https://github.com/BerriAI/litellm) to access multiple models.
-> 5. `--custom-system-prompt`: It is mainly used to add the `/no_think` instruction of Qwen 3 in the prompt. For example: `--custom-system-prompt "/no_think You are a professional, authentic machine translation engine."`
+> 1. BabelDOC now uses HuggingFace's MarianMT model (marefa-nlp/marefa-mt-en-ar) for English to Arabic translation by default.
+> 2. BabelDOC also supports OpenAI-compatible LLMs by using the `--openai` flag with an API key.
+> 3. For OpenAI-compatible LLMs, it is recommended to use models with strong compatibility with OpenAI, such as: `glm-4-flash`, `deepseek-chat`, etc.
+> 4. For HuggingFace models, translation-specific models like MarianMT models (marefa-nlp/marefa-mt-en-ar) and Helsinki-NLP's Opus-MT series work best.
+> 5. Currently, it has not been optimized for traditional translation engines like Bing/Google, it is recommended to use LLMs.
+> 6. You can use [litellm](https://github.com/BerriAI/litellm) to access multiple models.
+> 7. `--custom-system-prompt`: It is mainly used to add the `/no_think` instruction of Qwen 3 in the prompt. For example: `--custom-system-prompt "/no_think You are a professional, authentic machine translation engine."`
 
 ### OpenAI Specific Options
 
@@ -217,6 +175,20 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 >
 > 1. This tool supports any OpenAI-compatible API endpoints. Just set the correct base URL and API key. (e.g. `https://xxx.custom.xxx/v1`)
 > 2. For local models like Ollama, you can use any value as the API key (e.g. `--openai-api-key a`).
+
+### HuggingFace Specific Options
+
+- `--huggingface-model`: HuggingFace model to use for translation (default: marefa-nlp/marefa-mt-en-ar)
+- `--huggingface-device`: Device to run the model on (cpu, cuda, cuda:0, etc.) (default: cpu)
+- `--huggingface-max-length`: Maximum sequence length for the model (default: 512)
+
+> [!TIP]
+>
+> 1. You need to install the transformers package to use HuggingFace models: `pip install transformers torch`
+> 2. BabelDOC uses MarianMT models by default, specifically `marefa-nlp/marefa-mt-en-ar` for English to Arabic translation
+> 3. For other language pairs, Helsinki-NLP's Opus-MT models work well (e.g., `Helsinki-NLP/opus-mt-en-zh` for English to Chinese)
+> 4. For better performance on GPU, set `--huggingface-device cuda` if you have CUDA available
+> 5. The first time you use a model, it will be downloaded automatically
 
 ### Glossary Options
 
@@ -246,7 +218,7 @@ uv run babeldoc --files example.pdf --files example2.pdf --openai --openai-model
 - `--restore-offline-assets`: Restore an offline assets package from the specified file. This extracts models and fonts from a previously generated package.
 
 > [!TIP]
-> 
+>
 > 1. Offline assets packages are useful for environments without internet access or to speed up installation on multiple machines.
 > 2. Generate a package once with `babeldoc --generate-offline-assets /path/to/output/dir` and then distribute it.
 > 3. Restore the package on target machines with `babeldoc --restore-offline-assets /path/to/offline_assets_*.zip`.
@@ -325,57 +297,39 @@ report-interval = 0.5
 
 The current recommended way to call BabelDOC in Python is to call the `high_level.do_translate_async_stream` function of [pdf2zh next](https://github.com/PDFMathTranslate/PDFMathTranslate-next).
 
-> [!WARNING]
-> **All APIs of BabelDOC should be considered as internal APIs, and any direct use of BabelDOC is not supported.**
+> [!WARNING] > **All APIs of BabelDOC should be considered as internal APIs, and any direct use of BabelDOC is not supported.**
 
-## Background
+## Example Commands
 
-There are a lot projects and teams working on to make document editing and translating easier like:
+### Using OpenAI API
 
-- [mathpix](https://mathpix.com/)
-- [Doc2X](https://doc2x.noedgeai.com/)
-- [minerU](https://github.com/opendatalab/MinerU)
-- [PDFMathTranslate](https://github.com/funstory-ai/yadt)
+```bash
+babeldoc --files paper.pdf --openai --openai-api-key YOUR_API_KEY --lang-in en --lang-out zh-CN
+```
 
-There are also some solutions to solve specific parts of the problem like:
+### Using OpenAI-compatible API
 
-- [layoutreader](https://github.com/microsoft/unilm/tree/master/layoutreader): the read order of the text block in a pdf
-- [Surya](https://github.com/surya-is/surya): the structure of the pdf
+```bash
+babeldoc --files paper.pdf --openai --openai-api-key YOUR_API_KEY --openai-base-url https://api.example.com/v1 --lang-in en --lang-out zh-CN
+```
 
-This project hopes to promote a standard pipeline and interface to solve the problem.
+### Using HuggingFace Translation Model
 
-In fact, there are two main stages of a PDF parser or translator:
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model Helsinki-NLP/opus-mt-en-zh --lang-in en --lang-out zh-CN
+```
 
-- **Parsing**: A stage of parsing means to get the structure of the pdf such as text blocks, images, tables, etc.
-- **Rendering**: A stage of rendering means to render the structure into a new pdf or other format.
+### Using MarianMT Model for English to Arabic Translation
 
-For a service like mathpix, it will parse the pdf into a structure may be in a XML format, and then render them using a single column reader order as [layoutreader](https://github.com/microsoft/unilm/tree/master/layoutreader) does. The bad news is that the original structure lost.
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model marefa-nlp/marefa-mt-en-ar --lang-in en --lang-out ar
+```
 
-Some people will use Adobe PDF Parser because it will generate a Word document and it keeps the original structure. But it is somewhat expensive.
-And you know, a pdf or word document is not a good format for reading in mobile devices.
+### Using HuggingFace with GPU Acceleration
 
-We offer an intermediate representation of the results from parser and can be rendered into a new pdf or other format. The pipeline is also a plugin-based system which everybody can add their new model, ocr, renderer, etc.
-
-## Roadmap
-
-- [ ] Add line support
-- [ ] Add table support
-- [ ] Add cross-page/cross-column paragraph support
-- [ ] More advanced typesetting features
-- [ ] Outline support
-- [ ] ...
-
-Our first 1.0 version goal is to finish a translation from [PDF Reference, Version 1.7](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/pdfreference1.7old.pdf) to the following language version:
-
-- Simplified Chinese
-- Traditional Chinese
-- Japanese
-- Spanish
-
-And meet the following requirements:
-
-- layout error less than 1%
-- content loss less than 1%
+```bash
+babeldoc --files paper.pdf --huggingface --huggingface-model Helsinki-NLP/opus-mt-en-zh --huggingface-device cuda --lang-in en --lang-out zh-CN
+```
 
 ## Version Number Explanation
 
@@ -384,7 +338,6 @@ This project uses a combination of [Semantic Versioning](https://semver.org/) an
 > [!NOTE]
 >
 > The API compatibility here mainly refers to the compatibility with [pdf2zh_next](https://github.com/PDFMathTranslate/PDFMathTranslate-next).
-
 
 - MAJOR: Incremented by 1 when API incompatible changes are made or when proud improvements are implemented.
 
@@ -397,14 +350,6 @@ This project uses a combination of [Semantic Versioning](https://semver.org/) an
 3. Does not support drop caps.
 4. Large pages will be skipped.
 
-## How to Contribute
-
-We encourage you to contribute to YADT! Please check out the [CONTRIBUTING](https://github.com/funstory-ai/yadt/blob/main/docs/CONTRIBUTING.md) guide.
-
-Everyone interacting in YADT and its sub-projects' codebases, issue trackers, chat rooms, and mailing lists is expected to follow the YADT [Code of Conduct](https://github.com/funstory-ai/yadt/blob/main/docs/CODE_OF_CONDUCT.md).
-
-[Immersive Translation](https://immersivetranslate.com) sponsors monthly Pro membership redemption codes for active contributors to this project, see details at: [CONTRIBUTOR_REWARD.md](https://github.com/funstory-ai/BabelDOC/blob/main/docs/CONTRIBUTOR_REWARD.md)
-
 ## Acknowledgements
 
 - [PDFMathTranslate](https://github.com/Byaidu/PDFMathTranslate)
@@ -414,23 +359,12 @@ Everyone interacting in YADT and its sub-projects' codebases, issue trackers, ch
 - [Asynchronize](https://github.com/multimeric/Asynchronize/tree/master?tab=readme-ov-file)
 - [PriorityThreadPoolExecutor](https://github.com/oleglpts/PriorityThreadPoolExecutor)
 
-<h2 id="star_hist">Star History</h2>
-
-<a href="https://star-history.com/#funstory-ai/babeldoc&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=funstory-ai/babeldoc&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=funstory-ai/babeldoc&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=funstory-ai/babeldoc&type=Date"/>
- </picture>
-</a>
-
-> [!WARNING]
-> **Important Interaction Note for `--auto-enable-ocr-workaround`:**
+> [!WARNING] > **Important Interaction Note for `--auto-enable-ocr-workaround`:**
 >
 > When `--auto-enable-ocr-workaround` is set to `true` (either via command line or config file):
 >
 > 1.  During the initial setup, the values for `ocr_workaround` and `skip_scanned_detection` will be forced to `false` by `TranslationConfig`, regardless of whether you also set `--ocr-workaround` or `--skip-scanned-detection` flags.
 > 2.  Then, during the scanned document detection phase (`DetectScannedFile` stage):
->     *   If the document is identified as heavily scanned (e.g., >80% scanned pages) AND `auto_enable_ocr_workaround` is `true` (i.e., `translation_config.auto_enable_ocr_workaround` is true), the system will then attempt to set both `ocr_workaround` to `true` and `skip_scanned_detection` to `true`.
+>     - If the document is identified as heavily scanned (e.g., >80% scanned pages) AND `auto_enable_ocr_workaround` is `true` (i.e., `translation_config.auto_enable_ocr_workaround` is true), the system will then attempt to set both `ocr_workaround` to `true` and `skip_scanned_detection` to `true`.
 >
-> This means that `--auto-enable-ocr-workaround` effectively gives the system control to enable OCR processing for scanned documents, potentially overriding manual settings for `--ocr-workaround` and `--skip_scanned_detection` based on its detection results. If the document is *not* detected as heavily scanned, then the initial `false` values for `ocr_workaround` and `skip_scanned_detection` (forced by `--auto-enable-ocr-workaround` at the `TranslationConfig` initialization stage) will remain in effect unless changed by other logic.
+> This means that `--auto-enable-ocr-workaround` effectively gives the system control to enable OCR processing for scanned documents, potentially overriding manual settings for `--ocr-workaround` and `--skip_scanned_detection` based on its detection results. If the document is _not_ detected as heavily scanned, then the initial `false` values for `ocr_workaround` and `skip_scanned_detection` (forced by `--auto-enable-ocr-workaround` at the `TranslationConfig` initialization stage) will remain in effect unless changed by other logic.
