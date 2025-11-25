@@ -1,24 +1,15 @@
-# FastAPI and server dependencies
+# FastAPI and server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 aiofiles==23.2.1
-
-# CORS support
 python-jose[cryptography]==3.3.0
+gunicorn==21.2.0
 
-# Missing dependencies - ADD THESE
-tenacity
-tqdm
-rich
-peewee
-requests
-scikit-learn
-opencv-python-headless
-
-# Your existing BabelDOC dependencies
+# Core dependencies
 magic-pdf
 PyMuPDF
+pymupdf
 anthropic
 openai
 reportlab
@@ -29,5 +20,19 @@ numpy
 torch
 torchvision
 
-# Optional: For production deployment
-gunicorn==21.2.0
+# Missing dependencies
+tenacity
+tqdm
+rich
+peewee
+requests
+scikit-learn
+opencv-python-headless
+freetype-py
+lxml
+shapely
+ultralytics
+onnxruntime
+paddleocr
+rapidfuzz
+loguru
