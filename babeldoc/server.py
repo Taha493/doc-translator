@@ -59,6 +59,7 @@ TEMP_DIR.mkdir(exist_ok=True)
 LANGUAGE_CODES = {
     'en': 'en',
     'ar': 'ar',
+    'en-ar': 'en-ar',
     'es': 'es',
     'fr': 'fr',
     'de': 'de',
@@ -117,7 +118,7 @@ async def get_supported_languages():
     return {
         "supported_languages": {
             "en": "English",
-            "ar": "Arabic",
+            "en-ar": "Arabic",
             "es": "Spanish",
             "fr": "French",
             "de": "German",
