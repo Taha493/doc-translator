@@ -1,0 +1,24 @@
+# FastAPI and server dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+aiofiles==23.2.1
+
+# CORS support
+python-jose[cryptography]==3.3.0
+
+# Your existing BabelDOC dependencies (add any missing ones)
+magic-pdf
+PyMuPDF
+anthropic
+openai
+reportlab
+arabic-reshaper
+python-bidi
+Pillow
+numpy
+torch
+torchvision
+
+# Optional: For production deployment
+gunicorn==21.2.0
