@@ -83,6 +83,7 @@ async def startup_event():
 
 
 @app.get("/")
+@app.head("/")
 async def root():
     """Serve the frontend HTML"""
     try:
